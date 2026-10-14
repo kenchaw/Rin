@@ -26,7 +26,6 @@ export function HeaderActions({
   return (
     <div className={className}>
       <SearchButton plain={plain} />
-      <LanguageSwitch plain={plain} popoverUp={popoverUp} />
       <UserAvatar profile={profile} plain={plain} popoverUp={popoverUp} />
     </div>
   );
@@ -75,54 +74,6 @@ export function SearchButton({ className, onClose, plain = false }: { className?
           <Button title={value.length === 0 ? t("close") : label} onClick={onSearch} />
         </div>
       </Modal>
-    </div>
-  );
-}
-
-export function LanguageSwitch({ className, plain = false, popoverUp = false }: { className?: string; plain?: boolean; popoverUp?: boolean }) {
-  const { i18n } = useTranslation();
-  const languages = [
-    { code: "en", name: "English" },
-    { code: "zh-CN", name: "简体中文" },
-    { code: "zh-TW", name: "繁體中文" },
-    { code: "ja", name: "日本語" },
-  ];
-
-  return (
-    <div className={className + " flex flex-row items-center"}>
-      <Popup
-        trigger={
-          <button
-            title="Languages"
-            aria-label="Languages"
-            className={
-              plain
-                ? "flex aspect-[1] items-center justify-center px-1.5 text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-                : "flex rounded-full border dark:border-neutral-600 px-2 bg-w aspect-[1] items-center justify-center t-primary bg-button"
-            }
-          >
-            <i className="ri-translate-2" />
-          </button>
-        }
-        position={popoverUp ? "top left" : "bottom right"}
-        arrow={false}
-        closeOnDocumentClick
-      >
-        <div className={`${HEADER_POPUP_PANEL_CLASS} min-w-40`}>
-          <p className="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500 dark:text-neutral-400">
-            Languages
-          </p>
-          {languages.map(({ code, name }) => (
-            <button
-              key={code}
-              onClick={() => i18n.changeLanguage(code)}
-              className="block w-full rounded-lg px-3 py-2 text-left text-sm t-primary transition-colors hover:bg-black/5 dark:hover:bg-white/10"
-            >
-              {name}
-            </button>
-          ))}
-        </div>
-      </Popup>
     </div>
   );
 }
