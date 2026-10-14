@@ -19,54 +19,9 @@ export function NavBar({
   menu={menu}
   onClick={onClick}
   itemClassName={itemClassName}
-  title="Articles"
+  title="Bestseller"
   selected={location === "/" || location.startsWith("/feed")}
   href="/"
-/>
-
-<NavItem
-  menu={menu}
-  onClick={onClick}
-  itemClassName={itemClassName}
-  title="Headphones"
-  selected={location === "/hashtag/Headphones"}
-  href="/hashtag/Headphones"
-/>
-
-<NavItem
-  menu={menu}
-  onClick={onClick}
-  itemClassName={itemClassName}
-  title="Earbuds"
-  selected={location === "/hashtag/Earbuds"}
-  href="/hashtag/Earbuds"
-/>
-
-<NavItem
-  menu={menu}
-  onClick={onClick}
-  itemClassName={itemClassName}
-  title="Speakers"
-  selected={location === "/hashtag/Speakers"}
-  href="/hashtag/Speakers"
-/>
-
-<NavItem
-  menu={menu}
-  onClick={onClick}
-  itemClassName={itemClassName}
-  title="Chargers"
-  selected={location === "/hashtag/Chargers"}
-  href="/hashtag/Chargers"
-/>
-
-<NavItem
-  menu={menu}
-  onClick={onClick}
-  itemClassName={itemClassName}
-  title="QC Testing"
-  selected={location === "/hashtag/QC-Testing"}
-  href="/hashtag/QC-Testing"
 />
 
 <NavItem
