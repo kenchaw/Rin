@@ -134,6 +134,9 @@ function Footer() {
                         </Popup>
                     </>}
                 </p>
+                <p className='text-xs text-neutral-400 font-normal px-4 text-center'>
+                    As an Amazon Associate, I earn from qualifying purchases.
+                </p>
                 <div className="w-fit-content inline-flex rounded-full border border-zinc-200 p-[3px] dark:border-zinc-700">
                     <ThemeButton mode='light' current={modeState} label="Toggle light mode" icon="ri-sun-line" onClick={setMode} />
                     <ThemeButton mode='system' current={modeState} label="Toggle system mode" icon="ri-computer-line" onClick={setMode} />
