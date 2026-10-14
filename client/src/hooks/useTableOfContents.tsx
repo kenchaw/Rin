@@ -19,6 +19,7 @@ const getHeaderScrollOffset = () => {
 const useTableOfContents = (selector: string) => {
     const intersectingListRef = useRef<boolean[]>([]) // isIntersecting array
     const [tableOfContents, setTableOfContents] = useState<TableOfContent[]>([])
+    const [tocEmpty, setTocEmpty] = useState(true)
     const [activeIndex, setActiveIndex] = useState(0)
     const { t } = useTranslation()
     const io = useRef<IntersectionObserver | null>(null);
@@ -42,6 +43,7 @@ const useTableOfContents = (selector: string) => {
             element: header, // have to down little bit
         }))
         setTableOfContents(tocData)
+        setTocEmpty(tocData.length === 0)
 
         // create IntersectionObserver
         if (io.current) io.current.disconnect()
@@ -80,6 +82,7 @@ const useTableOfContents = (selector: string) => {
     const cleanup = (newId: string) => {
         if (lastRef.current === newId) return
         setRef(newId)
+        setTocEmpty(true)
         if (io.current) io.current.disconnect()
     }
 
@@ -88,6 +91,8 @@ const useTableOfContents = (selector: string) => {
 
     const TOC = useCallback(() => {
         const { tableOfContents, activeIndex, t } = tocStateRef.current
+
+        if (tableOfContents.length === 0) return null
 
         return <div className='rounded-2xl bg-w py-4 px-4 t-primary'>
             <h2 className="text-lg font-bold">{t("index.title")}</h2>
@@ -114,7 +119,7 @@ const useTableOfContents = (selector: string) => {
     }, [])
 
     return {
-        TOC, cleanup
+        TOC, cleanup, tocEmpty
     }
 }
 

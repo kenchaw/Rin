@@ -31,7 +31,7 @@ function extractFirstMarkdownImageUrl(content: string) {
   return stripImageUrlMetadata(match[1]);
 }
 
-export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Element, clean: (id: string) => void }) {
+export function FeedPage({ id, TOC, tocEmpty, clean }: { id: string, TOC: () => JSX.Element | null, tocEmpty: boolean, clean: (id: string) => void }) {
   const { t } = useTranslation();
   const siteConfig = useSiteConfig();
   const profile = useContext(ProfileContext);
@@ -309,6 +309,7 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
               {feed && <Comments id={`${feed.id}`} />}
               <div className="h-16" />
             </main>
+            {!tocEmpty && (
             <div className="w-80 hidden lg:block relative">
               <div
                 className={`start-0 end-0 top-[5.5rem] sticky`}
@@ -316,6 +317,7 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
                 <TOC />
               </div>
             </div>
+            )}
           </>
         )}
       </div>
@@ -325,8 +327,10 @@ export function FeedPage({ id, TOC, clean }: { id: string, TOC: () => JSX.Elemen
   );
 }
 
-export function TOCHeader({ TOC }: { TOC: () => JSX.Element }) {
+export function TOCHeader({ TOC, tocEmpty }: { TOC: () => JSX.Element | null, tocEmpty: boolean }) {
   const [isOpened, setIsOpened] = useState(false);
+
+  if (tocEmpty) return null;
 
   return (
     <div className="shrink-0 lg:hidden">

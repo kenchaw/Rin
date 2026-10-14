@@ -101,11 +101,11 @@ export function AppRoutes() {
       </AppRoute>
 
       <TocRoute path="/feed/:id">
-        {(params, toc, cleanup) => <FeedPage id={params.id || ""} TOC={toc} clean={cleanup} />}
+        {(params, toc, tocEmpty, cleanup) => <FeedPage id={params.id || ""} TOC={toc} tocEmpty={tocEmpty} clean={cleanup} />}
       </TocRoute>
 
       <TocRoute path="/:alias">
-        {(params, toc, cleanup) => <FeedPage id={params.alias || ""} TOC={toc} clean={cleanup} />}
+        {(params, toc, tocEmpty, cleanup) => <FeedPage id={params.alias || ""} TOC={toc} tocEmpty={tocEmpty} clean={cleanup} />}
       </TocRoute>
 
       <AppRoute path="/user/github">
@@ -204,13 +204,13 @@ function TocRoute({
   children,
 }: {
   path: PathPattern;
-  children: (params: DefaultParams, toc: () => JSX.Element, cleanup: (id: string) => void) => ReactNode;
+  children: (params: DefaultParams, toc: () => JSX.Element | null, tocEmpty: boolean, cleanup: (id: string) => void) => ReactNode;
 }) {
-  const { TOC, cleanup } = useTableOfContents(".toc-content");
+  const { TOC, cleanup, tocEmpty } = useTableOfContents(".toc-content");
 
   return (
-    <AppRoute path={path} headerComponent={TOCHeader({ TOC })} paddingClassName="mx-4">
-      {(params) => children(params, TOC, cleanup)}
+    <AppRoute path={path} headerComponent={TOCHeader({ TOC, tocEmpty })} paddingClassName="mx-4">
+      {(params) => children(params, TOC, tocEmpty, cleanup)}
     </AppRoute>
   );
 }
