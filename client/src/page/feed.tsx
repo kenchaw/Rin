@@ -306,7 +306,7 @@ export function FeedPage({ id, TOC, tocEmpty, clean }: { id: string, TOC: () => 
                 </div>
               </article>
               {id !== "about" && <AdjacentSection id={id} setError={setError} />}
-              {feed && id !== "about" && <Comments id={`${feed.id}`} />}
+              {feed && <Comments id={`${feed.id}`} />}
               <div className="h-16" />
             </main>
             {!tocEmpty && (
