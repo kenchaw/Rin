@@ -19,9 +19,27 @@ export function NavBar({
   menu={menu}
   onClick={onClick}
   itemClassName={itemClassName}
-  title="Bestseller"
+  title="Best"
   selected={location === "/" || location.startsWith("/feed")}
   href="/"
+/>
+
+<NavItem
+  menu={menu}
+  onClick={onClick}
+  itemClassName={itemClassName}
+  title="Fair"
+  selected={location === "/hashtag/Fair"}
+  href="/hashtag/Fair"
+/>
+
+<NavItem
+  menu={menu}
+  onClick={onClick}
+  itemClassName={itemClassName}
+  title="Avoid"
+  selected={location === "/hashtag/Avoid"}
+  href="/hashtag/Avoid"
 />
 
 <NavItem
