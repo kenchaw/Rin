@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
     inputs:
       artifact_url:
-        description: 'Cloudflare build artifact URL (.tar.gz, e.g., build-v1.0.0-cloudflare.tar.gz)'
-        required: true
+        description: 'Cloudflare build artifact URL (.tar.gz, e.g., build-v1.0.0-cloudflare.tar.gz). Leave empty to use the latest successful Build artifact.'
+        required: false
         type: string
       environment:
         description: 'Deployment environment'
@@ -19,6 +19,7 @@ on:
         options:
           - production
           - preview
+          - blog-b
 
 permissions:
   contents: read
@@ -30,9 +31,35 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     outputs:
-      is_production: ${{ steps.meta.outputs.is_production }}
+      target_env: ${{ steps.meta.outputs.target_env }}
       pr_number: ${{ steps.meta.outputs.pr_number }}
+      repo_worker_name: ${{ steps.repo_defaults.outputs.worker_name }}
+      repo_db_name: ${{ steps.repo_defaults.outputs.db_name }}
     steps:
+      - name: Record repo-level defaults
+        id: repo_defaults
+        env:
+          REPO_WORKER_NAME: ${{ vars.WORKER_NAME }}
+          REPO_DB_NAME: ${{ vars.DB_NAME }}
+        run: |
+          # prepare runs without an environment, so these are the repo-level
+          # values (Blog A's worker/database when set at repo level).
+          echo "worker_name=${REPO_WORKER_NAME:-}" >> $GITHUB_OUTPUT
+          echo "db_name=${REPO_DB_NAME:-}" >> $GITHUB_OUTPUT
+
+      - name: Resolve latest successful Build run
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.artifact_url == '' }}
+        id: latest_build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh run list --workflow Build --branch ${{ github.event.repository.default_branch }} --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN_ID" ]; then
+            echo "❌ No successful Build run found on the default branch."
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> $GITHUB_OUTPUT
+
       - name: Download build artifacts from workflow
         if: ${{ github.event_name == 'workflow_run' }}
         uses: actions/download-artifact@v4
@@ -42,12 +69,21 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Download build artifacts from latest Build
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.artifact_url == '' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ steps.latest_build.outputs.run_id }}
+          path: ./artifacts
+          run-id: ${{ steps.latest_build.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download artifacts from URL
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.artifact_url != '' }}
         run: |
           URL="${{ github.event.inputs.artifact_url }}"
           echo "Downloading from: $URL"
-          
+
           mkdir -p ./artifacts
           if [[ "$URL" == *.zip ]]; then
             curl -L "$URL" -o ./artifacts/build.zip
@@ -64,19 +100,15 @@ jobs:
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             # Manual deployment
-            if [ "${{ github.event.inputs.environment }}" == "production" ]; then
-              echo "is_production=true" >> $GITHUB_OUTPUT
-            else
-              echo "is_production=false" >> $GITHUB_OUTPUT
-            fi
+            echo "target_env=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
             echo "pr_number=0" >> $GITHUB_OUTPUT
           else
             # Auto deployment from workflow_run - check ref
             REF=$(cat ./artifacts/build-meta/ref 2>/dev/null || echo "unknown")
             if [[ "$REF" == "refs/heads/main" || "$REF" == "refs/heads/master" ]]; then
-              echo "is_production=true" >> $GITHUB_OUTPUT
+              echo "target_env=production" >> $GITHUB_OUTPUT
             else
-              echo "is_production=false" >> $GITHUB_OUTPUT
+              echo "target_env=preview" >> $GITHUB_OUTPUT
             fi
             # Read PR number from build-meta
             PR_NUMBER=$(cat ./artifacts/build-meta/pr_number 2>/dev/null || echo "0")
@@ -94,7 +126,7 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     environment:
-      name: ${{ needs.prepare.outputs.is_production == 'true' && 'production' || 'preview' }}
+      name: ${{ needs.prepare.outputs.target_env }}
       url: ${{ steps.deploy.outputs.url }}
     steps:
       - name: Checkout repository
@@ -164,11 +196,32 @@ jobs:
           REPO_RSS_ENABLE: ${{ vars.RSS_ENABLE }}
           REPO_WORKER_NAME: ${{ vars.WORKER_NAME }}
           REPO_DB_NAME: ${{ vars.DB_NAME }}
+          # Repo-level values recorded before the environment applied, used
+          # to prove blog-b does not reuse Blog A's worker/database.
+          REPO_LEVEL_WORKER_NAME: ${{ needs.prepare.outputs.repo_worker_name }}
+          REPO_LEVEL_DB_NAME: ${{ needs.prepare.outputs.repo_db_name }}
         run: |
+          TARGET_ENV="${{ needs.prepare.outputs.target_env }}"
           PR_NUMBER="${{ needs.prepare.outputs.pr_number }}"
-          if [[ "${{ needs.prepare.outputs.is_production }}" == "true" ]]; then
+          if [[ "$TARGET_ENV" == "production" ]]; then
             echo "worker_name=${REPO_WORKER_NAME:-rin-server}" >> $GITHUB_OUTPUT
             echo "db_name=${REPO_DB_NAME:-rin}" >> $GITHUB_OUTPUT
+            echo "name=${REPO_NAME:-Rin}" >> $GITHUB_OUTPUT
+          elif [[ "$TARGET_ENV" == "blog-b" ]]; then
+            # Blog B must have its own Worker and database; never fall back
+            # to Blog A's, and never silently reuse the repo-level values.
+            if [[ -z "$REPO_WORKER_NAME" || -z "$REPO_DB_NAME" ]]; then
+              echo "❌ blog-b requires WORKER_NAME and DB_NAME in the blog-b environment."
+              exit 1
+            fi
+            if [[ "$REPO_WORKER_NAME" == "$REPO_LEVEL_WORKER_NAME" || "$REPO_DB_NAME" == "$REPO_LEVEL_DB_NAME" ]]; then
+              echo "❌ blog-b WORKER_NAME/DB_NAME must differ from Blog A's (repo-level) values."
+              echo "   Resolved: WORKER_NAME=$REPO_WORKER_NAME DB_NAME=$REPO_DB_NAME"
+              echo "   Blog A (repo-level): WORKER_NAME=$REPO_LEVEL_WORKER_NAME DB_NAME=$REPO_LEVEL_DB_NAME"
+              exit 1
+            fi
+            echo "worker_name=${REPO_WORKER_NAME}" >> $GITHUB_OUTPUT
+            echo "db_name=${REPO_DB_NAME}" >> $GITHUB_OUTPUT
             echo "name=${REPO_NAME:-Rin}" >> $GITHUB_OUTPUT
           elif [[ "$PR_NUMBER" != "0" ]]; then
             # PR Preview uses -pr-<number> suffix
@@ -220,10 +273,10 @@ jobs:
           CACHE_STORAGE_MODE: ${{ vars.CACHE_STORAGE_MODE || 's3' }}
         run: |
           set -euo pipefail
-          if [[ "${{ needs.prepare.outputs.is_production }}" == "true" ]]; then
-            bun run deploy | tee deploy_output.log
-          else
+          if [[ "${{ needs.prepare.outputs.target_env }}" == "preview" ]]; then
             bun run deploy --preview | tee deploy_output.log
+          else
+            bun run deploy | tee deploy_output.log
           fi
           URL="$(grep -oP 'App URL:\s*\Khttps://[^\s]+' deploy_output.log | tail -n 1 || true)"
           if [[ -z "$URL" ]]; then
@@ -252,8 +305,8 @@ jobs:
               repo: context.repo.repo,
               issue_number: prNumber
             });
-            const botComment = comments.find(comment => 
-              comment.user.type === 'Bot' && 
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
               comment.body.includes('🚀 **Preview deployed!**')
             );
             const body = `🚀 **Preview deployed!**\n\n🔗 ${url}`;
