@@ -66,11 +66,6 @@ function pickDescription(feed: any, plain: string): string {
   return plain.replace(/\*As an Amazon Associate[^\n]*/gi, "").trim();
 }
 
-function isPinterestRequest(request: Request): boolean {
-  const ua = request.headers.get("user-agent") || "";
-  return /pinterest/i.test(ua);
-}
-
 // Pinterest 要求图钉图片为竖版或正方形（2:3 到 1:1），横版或过窄图会被拒。
 // 对 Pinterest 抓取器，把 og:image 经 weserv 代理裁成 1000x1500（2:3）。
 function toPinterestImage(url: string): string {
@@ -78,12 +73,13 @@ function toPinterestImage(url: string): string {
   return `https://images.weserv.nl/?url=ssl:${encodeURIComponent(stripped)}&w=1000&h=1500&fit=cover`;
 }
 
-function buildFeedMetaHtml(feed: any, origin: string, forPinterest = false): string {
+function buildFeedMetaHtml(feed: any, origin: string): string {
   const title = `${feed.title ?? "Article"} - ${SITE_NAME}`;
   const plain = stripMarkdown(feed.content ?? "");
   const description = truncateText(pickDescription(feed, plain), 160) || SITE_DESCRIPTION;
   const rawImage = extractImageWithMetadata(feed.content ?? "") ?? `${origin}/favicon.ico`;
-  const imageUrl = forPinterest ? toPinterestImage(rawImage) : rawImage;
+  // 所有社交/搜索抓取器统一给 2:3 竖版图（Pinterest 拒收横版与过窄图）
+  const imageUrl = toPinterestImage(rawImage);
   const canonical = `${origin}/feed/${feed.id}`;
   const feedTitle = String(feed.title ?? "");
   return [
@@ -247,7 +243,7 @@ export async function handleFetch(
             request,
             env,
             executionContext,
-            buildFeedMetaHtml(feed, new URL(request.url).origin, isPinterestRequest(request)),
+            buildFeedMetaHtml(feed, new URL(request.url).origin),
           );
           if (withMeta) return withMeta;
         }
