@@ -283,6 +283,7 @@ export function FeedPage({ id, TOC, tocEmpty, clean }: { id: string, TOC: () => 
                     ) : null}
                   </div>
                 )}
+                <AmazonCta content={feed.content} variant="top" />
                 <Markdown content={feed.content} />
                 <AmazonCta content={feed.content} />
                 <div className="mt-6 flex flex-col gap-2">
