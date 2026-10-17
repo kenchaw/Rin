@@ -20,6 +20,7 @@ import { Button } from "../components/button";
 import { Tips } from "../components/tips";
 import mermaid from "mermaid";
 import { AdjacentSection } from "../components/adjacent_feed.tsx";
+import { AmazonCta } from "../components/amazon-cta";
 import { stripImageUrlMetadata } from "../utils/image-upload";
 
 function extractFirstMarkdownImageUrl(content: string) {
@@ -283,6 +284,7 @@ export function FeedPage({ id, TOC, tocEmpty, clean }: { id: string, TOC: () => 
                   </div>
                 )}
                 <Markdown content={feed.content} />
+                <AmazonCta content={feed.content} />
                 <div className="mt-6 flex flex-col gap-2">
                   {hashtags.length > 0 && (
                     <div className="flex flex-row flex-wrap gap-x-2">

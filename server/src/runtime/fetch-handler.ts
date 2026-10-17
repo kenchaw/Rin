@@ -59,12 +59,17 @@ async function fetchFeedForMeta(
   }
 }
 
+function pickDescription(feed: any, plain: string): string {
+  const s = typeof feed.summary === "string" ? feed.summary.trim() : "";
+  // 摘要字段有时被复用存放联盟披露行，不适合作为搜索摘要
+  if (s && !/as an amazon associate/i.test(s)) return s;
+  return plain.replace(/\*As an Amazon Associate[^\n]*/gi, "").trim();
+}
+
 function buildFeedMetaHtml(feed: any, origin: string): string {
   const title = `${feed.title ?? "Article"} - ${SITE_NAME}`;
   const plain = stripMarkdown(feed.content ?? "");
-  const rawDesc =
-    typeof feed.summary === "string" && feed.summary.trim() ? feed.summary.trim() : plain;
-  const description = truncateText(rawDesc, 160) || SITE_DESCRIPTION;
+  const description = truncateText(pickDescription(feed, plain), 160) || SITE_DESCRIPTION;
   const imageUrl = extractImageWithMetadata(feed.content ?? "") ?? `${origin}/favicon.ico`;
   const canonical = `${origin}/feed/${feed.id}`;
   const feedTitle = String(feed.title ?? "");
